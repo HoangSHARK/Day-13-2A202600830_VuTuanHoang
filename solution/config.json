@@ -1,12 +1,12 @@
 {
   "provider": "openai",
-  "model": "gpt-5.4-nano",
-  "model_price_tier": "premium",
+  "model": "deepseek-v4-flash",
+  "model_price_tier": "economy",
   "max_steps": 12,
   "loop_guard": true,
   "temperature": 0.2,
-  "context_size": 8,
-  "verbose_system": true,
+  "context_size": 4,
+  "verbose_system": false,
   "timeout_ms": 0,
   "max_completion_tokens": 2000,
   "retry": {"enabled": true, "max_attempts": 3, "backoff_ms": 500},
@@ -18,8 +18,8 @@
   "tool_error_rate": 0.18,
   "catalog_override": {},
   "route_rules": [],
-  "planner": true,
-  "verify": true,
+  "planner": false,
+  "verify": false,
   "self_consistency": 2,
   "tool_budget": 4
 }

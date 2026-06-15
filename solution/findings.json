@@ -3,28 +3,70 @@
   "schema_version": 1,
   "findings": [
     {
+      "fault_class": "error_spike",
+      "evidence": {"metric": "error_rate", "observed": "Some tool calls fail intermittently", "trace_ids": []},
+      "root_cause": "Unstable network or flaky tools without retry mechanism.",
+      "suggested_fix": "Enabled retry in config.json with max_attempts 3 and backoff_ms 500."
+    },
+    {
+      "fault_class": "latency_spike",
+      "evidence": {"metric": "latency", "observed": "Long-tail slow requests", "trace_ids": []},
+      "root_cause": "Redundant calls to identical tools or slow inference.",
+      "suggested_fix": "Enabled cache in config.json."
+    },
+    {
+      "fault_class": "cost_blowup",
+      "evidence": {"metric": "cost", "observed": "High cost per request", "trace_ids": []},
+      "root_cause": "Large context size and verbose system prompts eating tokens.",
+      "suggested_fix": "Reduced context_size and verbose_system to false in config."
+    },
+    {
+      "fault_class": "quality_drift",
+      "evidence": {"metric": "correctness", "observed": "Answers degrade in later turns", "trace_ids": []},
+      "root_cause": "Session drift corrupting context over time.",
+      "suggested_fix": "Set context_reset_every to 3 in config.json."
+    },
+    {
+      "fault_class": "infinite_loop",
+      "evidence": {"metric": "steps", "observed": "Status max_steps reached", "trace_ids": []},
+      "root_cause": "Agent stuck repeating identical failing tool calls.",
+      "suggested_fix": "Enabled loop_guard and reduced max_steps in config."
+    },
+    {
+      "fault_class": "tool_failure",
+      "evidence": {"metric": "correctness", "observed": "Diacritic cities fail", "trace_ids": []},
+      "root_cause": "Unicode normalization missing and bad catalog override.",
+      "suggested_fix": "Enabled normalize_unicode and cleared catalog_override in config."
+    },
+    {
+      "fault_class": "pii_leak",
+      "evidence": {"metric": "pii_leak", "observed": "Model echoes customer email/phone", "trace_ids": []},
+      "root_cause": "No output redaction or explicit prompt instruction.",
+      "suggested_fix": "Enabled redact_pii in config and added strict PII rule to prompt."
+    },
+    {
       "fault_class": "fabrication",
       "evidence": {"metric": "correctness", "observed": "Model invents totals for out of stock items", "trace_ids": []},
-      "root_cause": "Bad system prompt encouraging guessing and preventing refusal.",
+      "root_cause": "Bad system prompt encouraging guessing.",
       "suggested_fix": "Rewrote prompt to enforce grounding and explicit refusal if no stock."
     },
     {
       "fault_class": "arithmetic_error",
       "evidence": {"metric": "correctness", "observed": "Wrong totals when discounts applied", "trace_ids": []},
-      "root_cause": "High temperature (1.6) and bad prompt leading to estimated arithmetic.",
-      "suggested_fix": "Set temperature=0.2, self_consistency=2, and provided exact formula in prompt."
+      "root_cause": "High temperature and missing formula.",
+      "suggested_fix": "Set temperature to 0.2, self_consistency to 2, added floor formula to prompt."
+    },
+    {
+      "fault_class": "tool_overuse",
+      "evidence": {"metric": "tools_used", "observed": "More tool calls than needed", "trace_ids": []},
+      "root_cause": "Agent checking same items repeatedly.",
+      "suggested_fix": "Set tool_budget and added instruction to call each tool once."
     },
     {
       "fault_class": "prompt_injection",
       "evidence": {"metric": "correctness", "observed": "Model obeys prices hidden in GHI CHÚ", "trace_ids": []},
       "root_cause": "Model blindly follows instructions embedded in user data.",
-      "suggested_fix": "Sanitize GHI CHÚ from question in wrapper and add strict DATA constraint to prompt."
-    },
-    {
-      "fault_class": "pii_leak",
-      "evidence": {"metric": "pii_leak", "observed": "Model echoes customer email/phone", "trace_ids": []},
-      "root_cause": "Lack of output redaction and bad prompt.",
-      "suggested_fix": "Enabled redact_pii in config and instructed prompt to never repeat PII."
+      "suggested_fix": "Sanitized GHI CHÚ in wrapper.py and added strict DATA constraint to prompt."
     }
   ]
 }
