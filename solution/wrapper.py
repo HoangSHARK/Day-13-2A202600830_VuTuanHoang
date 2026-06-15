@@ -17,17 +17,56 @@ the config you pass to call_next, e.g.:
 """
 from __future__ import annotations
 
-# You may reuse the Day 13 toolkit, e.g.:
-# from telemetry.logger import logger
-# from telemetry.cost import cost_from_usage
-# from telemetry.redact import redact
-
+import time
+import re
+from telemetry.logger import logger
+from telemetry.cost import cost_from_usage
 
 def mitigate(call_next, question, config, context):
-    # TODO: add observability here (log latency, tokens, cost, errors, PII, tool counts).
-    # TODO: add mitigations (retry on error, cache repeats, route cheap, reset drifting
-    #       sessions, validate arithmetic, sanitize order notes, redact PII...).
-    # TODO: optionally route a better system prompt:
-    #       conf = dict(config); conf["system_prompt"] = "..."; return call_next(question, conf)
-    result = call_next(question, config)        # <-- passthrough stub: replace me
+    t0 = time.time()
+    
+    # Sanitize input: strip out injected notes that try to bypass prices
+    if isinstance(question, str):
+        if "GHI CHÚ:" in question:
+            question = re.sub(r'GHI CHÚ:.*$', '', question, flags=re.MULTILINE|re.DOTALL)
+        if "Ghi chú:" in question:
+            question = re.sub(r'Ghi chú:.*$', '', question, flags=re.MULTILINE|re.DOTALL)
+            
+    try:
+        result = call_next(question, config)
+        if not isinstance(result, dict):
+            result = {"answer": None, "status": "unknown_error", "steps": 0, "trace": [], "meta": {}}
+    except Exception as e:
+        print(f"\n[LỖI API HOẶC AGENT]: {e}\n")
+        return {"answer": None, "status": "api_error", "steps": 0, "trace": [], "meta": {}}
+        
+    try:
+        meta = result.get("meta") or {}
+        latency_ms = meta.get("latency_ms")
+        if latency_ms is None:
+            latency_ms = int((time.time() - t0) * 1000)
+            
+        usage = meta.get("usage") or {}
+        model = meta.get("model") or "gpt-5.4-nano"
+        
+        # Calculate approximate cost
+        cost = cost_from_usage(model, usage)
+        
+        tools = meta.get("tools_used") or []
+        
+        # Log observability data
+        logger.log_event("CALL", {
+            "qid": context.get("qid"),
+            "session_id": context.get("session_id"),
+            "turn_index": context.get("turn_index"),
+            "latency_ms": latency_ms,
+            "cost": cost,
+            "tools_used": len(tools),
+            "steps": result.get("steps") or 0,
+            "status": result.get("status")
+        })
+    except Exception as e:
+        # Prevent wrapper errors from failing the request
+        print(f"Observability error: {e}")
+        
     return result
